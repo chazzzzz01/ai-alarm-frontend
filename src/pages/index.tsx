@@ -11,7 +11,7 @@ type AlarmResponse = {
 
 export default function Home() {
   const [text, setText] = useState('');
-  const [response, setResponse] = useState<AlarmResponse | null>(null); // ✅ Fixed: no more `any`
+  const [response, setResponse] = useState<AlarmResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Ask for Notification permission on load
@@ -34,7 +34,6 @@ export default function Home() {
   };
 
   const scheduleLocalAlarm = (alarmTime: string, reason: string) => {
-    // Check if it's an interval
     if (alarmTime.includes('every')) {
       const match = alarmTime.match(/every (\d+) (second|minute|hour)/);
       if (match) {
@@ -49,12 +48,11 @@ export default function Home() {
         setTimeout(() => showNotification(reason), milliseconds);
       }
     } else {
-      // Scheduled time
       const target = new Date(alarmTime).getTime();
       const now = new Date().getTime();
       const delay = target - now;
 
-      if (delay > 0 && delay < 86400000) { // limit 24 hours
+      if (delay > 0 && delay < 86400000) {
         setTimeout(() => showNotification(reason), delay);
       }
     }
@@ -63,8 +61,9 @@ export default function Home() {
   const handleSetAlarm = async () => {
     setLoading(true);
     setResponse(null);
+
     try {
-      const res = await fetch('/api/set-alarm', {
+      const res = await fetch(`${process.env.PUBLIC_API_URL}/set-alarm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
@@ -72,10 +71,9 @@ export default function Home() {
 
       if (!res.ok) throw new Error('Failed to set alarm');
 
-      const data: AlarmResponse = await res.json(); // ✅ Type applied here too
+      const data: AlarmResponse = await res.json();
       setResponse(data);
 
-      // Schedule frontend notification
       if (data.status === 'success') {
         scheduleLocalAlarm(data.alarm_time || '', data.reason || '');
       }
@@ -113,7 +111,9 @@ export default function Home() {
             {response.status === 'success' ? (
               <div className="text-green-300">
                 ✅ Alarm set successfully!
-                <div>⏰ Alarm Time: <span className="font-mono">{response.alarm_time}</span></div>
+                <div>
+                  ⏰ Alarm Time: <span className="font-mono">{response.alarm_time}</span>
+                </div>
                 <div>📌 Reason: {response.reason}</div>
                 <div className="text-xs text-white/50 mt-2">(Browser alarm will notify you)</div>
               </div>
