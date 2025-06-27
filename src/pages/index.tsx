@@ -1,9 +1,17 @@
 'use client';
 import { useState, useEffect } from 'react';
 
+// ✅ Define the response type
+type AlarmResponse = {
+  status: 'success' | 'error';
+  message?: string;
+  alarm_time?: string;
+  reason?: string;
+};
+
 export default function Home() {
   const [text, setText] = useState('');
-  const [response, setResponse] = useState<any>(null);
+  const [response, setResponse] = useState<AlarmResponse | null>(null); // ✅ Fixed: no more `any`
   const [loading, setLoading] = useState(false);
 
   // Ask for Notification permission on load
@@ -64,12 +72,12 @@ export default function Home() {
 
       if (!res.ok) throw new Error('Failed to set alarm');
 
-      const data = await res.json();
+      const data: AlarmResponse = await res.json(); // ✅ Type applied here too
       setResponse(data);
 
       // Schedule frontend notification
       if (data.status === 'success') {
-        scheduleLocalAlarm(data.alarm_time, data.reason);
+        scheduleLocalAlarm(data.alarm_time || '', data.reason || '');
       }
     } catch (error) {
       console.error('Alarm error:', error);
