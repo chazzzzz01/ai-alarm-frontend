@@ -1,115 +1,122 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+'use client';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
+  const [text, setText] = useState('');
+  const [response, setResponse] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Ask for Notification permission on load
+  useEffect(() => {
+    if ('Notification' in window) {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Show alarm notification
+  const showNotification = (reason: string) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('⏰ Alarm', {
+        body: reason || 'Time is up!',
+        icon: '/alarm.png',
+      });
+    } else {
+      alert(reason); // fallback
+    }
+  };
+
+  const scheduleLocalAlarm = (alarmTime: string, reason: string) => {
+    // Check if it's an interval
+    if (alarmTime.includes('every')) {
+      const match = alarmTime.match(/every (\d+) (second|minute|hour)/);
+      if (match) {
+        const value = parseInt(match[1]);
+        const unit = match[2];
+
+        let milliseconds = 0;
+        if (unit.includes('second')) milliseconds = value * 1000;
+        if (unit.includes('minute')) milliseconds = value * 60 * 1000;
+        if (unit.includes('hour')) milliseconds = value * 60 * 60 * 1000;
+
+        setTimeout(() => showNotification(reason), milliseconds);
+      }
+    } else {
+      // Scheduled time
+      const target = new Date(alarmTime).getTime();
+      const now = new Date().getTime();
+      const delay = target - now;
+
+      if (delay > 0 && delay < 86400000) { // limit 24 hours
+        setTimeout(() => showNotification(reason), delay);
+      }
+    }
+  };
+
+  const handleSetAlarm = async () => {
+    setLoading(true);
+    setResponse(null);
+    try {
+      const res = await fetch('/api/set-alarm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!res.ok) throw new Error('Failed to set alarm');
+
+      const data = await res.json();
+      setResponse(data);
+
+      // Schedule frontend notification
+      if (data.status === 'success') {
+        scheduleLocalAlarm(data.alarm_time, data.reason);
+      }
+    } catch (error) {
+      console.error('Alarm error:', error);
+      setResponse({ status: 'error', message: 'Failed to connect to backend.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <main className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 to-slate-700 text-white">
+      <div className="w-full max-w-md glass p-6 rounded-2xl shadow-xl">
+        <h1 className="text-2xl font-bold mb-4 text-center">AI Alarm Clock</h1>
+
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder='e.g. "Set alarm to drink water every 30 minutes"'
+          className="w-full p-3 rounded bg-white/10 border border-white/20 text-white placeholder:text-white/70 mb-4"
         />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/pages/index.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+        <button
+          onClick={handleSetAlarm}
+          disabled={loading || text.trim() === ''}
+          className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-400 text-white font-bold py-2 px-4 rounded transition"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          {loading ? 'Setting Alarm...' : 'Set Alarm'}
+        </button>
+
+        {response && (
+          <div className="mt-4 text-sm">
+            {response.status === 'success' ? (
+              <div className="text-green-300">
+                ✅ Alarm set successfully!
+                <div>⏰ Alarm Time: <span className="font-mono">{response.alarm_time}</span></div>
+                <div>📌 Reason: {response.reason}</div>
+                <div className="text-xs text-white/50 mt-2">(Browser alarm will notify you)</div>
+              </div>
+            ) : (
+              <div className="text-red-400">
+                ❌ {response.message || 'Something went wrong'}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
