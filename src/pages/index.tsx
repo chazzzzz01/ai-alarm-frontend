@@ -63,7 +63,7 @@ export default function Home() {
     setResponse(null);
 
     try {
-      const res = await fetch(`${process.env.PUBLIC_API_URL}/set-alarm`, {
+      const res = await fetch(`${process.env.PUBLIC_URL}/set-alarm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
