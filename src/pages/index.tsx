@@ -95,7 +95,7 @@ export default function Home() {
     setResponse(null);
 
     try {
-      const apiURL = 'https://mobileaialarmclock-production.up.railway.app';
+      const apiURL = "https://mobileaialarmclock-production.up.railway.app";
 
       const res = await fetch('/api/set-alarm', {
 
